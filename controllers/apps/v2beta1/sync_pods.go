@@ -164,7 +164,7 @@ func (s *syncPods) canBeScaleDownRs(
 		}
 	}
 
-	if shouldDeletePodInfo.Edition == "Enterprise" && shouldDeletePodInfo.Session > 0 {
+	if shouldDeletePodInfo.Session > 0 {
 		if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
 			return nil, emperror.Wrap(err, "failed to start node evacuation")
 		}
@@ -235,7 +235,7 @@ func (s *syncPods) canBeScaleDownSts(
 		return true, nil
 	}
 
-	if shouldDeletePodInfo.Edition == "Enterprise" && shouldDeletePodInfo.Session > 0 {
+	if shouldDeletePodInfo.Session > 0 {
 		if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
 			return false, emperror.Wrap(err, "failed to start node evacuation")
 		}
