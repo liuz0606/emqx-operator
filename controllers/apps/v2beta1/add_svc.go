@@ -113,24 +113,24 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 				Port:       1883,
 				TargetPort: intstr.FromInt(1883),
 			},
-			{
-				Name:       "ssl-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       8883,
-				TargetPort: intstr.FromInt(8883),
-			},
-			{
-				Name:       "ws-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       8083,
-				TargetPort: intstr.FromInt(8083),
-			},
-			{
-				Name:       "wss-default",
-				Protocol:   corev1.ProtocolTCP,
-				Port:       8084,
-				TargetPort: intstr.FromInt(8084),
-			},
+			//{
+			//	Name:       "ssl-default",
+			//	Protocol:   corev1.ProtocolTCP,
+			//	Port:       8883,
+			//	TargetPort: intstr.FromInt(8883),
+			//},
+			//{
+			//	Name:       "ws-default",
+			//	Protocol:   corev1.ProtocolTCP,
+			//	Port:       8083,
+			//	TargetPort: intstr.FromInt(8083),
+			//},
+			//{
+			//	Name:       "wss-default",
+			//	Protocol:   corev1.ProtocolTCP,
+			//	Port:       8084,
+			//	TargetPort: intstr.FromInt(8084),
+			//},
 		}...)
 	}
 
