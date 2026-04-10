@@ -2,7 +2,6 @@ package v2beta1
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -139,11 +138,5 @@ func putEMQXConfigsByAPI(r innerReq.RequesterInterface, mode, config string) err
 }
 
 func mergeDefaultConfig(config string) string {
-	defaultListenerConfig := ""
-	defaultListenerConfig += fmt.Sprintln("listeners.tcp.default.bind = 1883")
-	defaultListenerConfig += fmt.Sprintln("listeners.ssl.default.bind = 8883")
-	defaultListenerConfig += fmt.Sprintln("listeners.ws.default.bind  = 8083")
-	defaultListenerConfig += fmt.Sprintln("listeners.wss.default.bind = 8084")
-
-	return fmt.Sprintf("%s\n%s", defaultListenerConfig, config)
+	return config
 }
