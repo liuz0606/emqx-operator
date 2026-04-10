@@ -265,7 +265,10 @@ func GetListenersServicePorts(hoconString string) ([]corev1.ServicePort, error) 
 		for name, config := range configs.(hocon.Object) {
 			// Wait fix this issue: https://github.com/gurkankaymak/hocon/issues/39
 			// c, err := hocon.ParseString(config.String())
-			obj := config.(hocon.Object)
+			obj, ok := config.(hocon.Object)
+			if !ok {
+				continue
+			}
 			cutConfig := hocon.Object{}
 			if v, ok := obj["enable"]; ok {
 				cutConfig["enable"] = v
