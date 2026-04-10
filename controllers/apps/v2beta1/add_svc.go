@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -105,7 +106,32 @@ func generateListenerService(instance *appsv2beta1.EMQX, configStr string) *core
 
 	ports, _ := appsv2beta1.GetListenersServicePorts(configStr)
 	if len(ports) == 0 {
-		return nil
+		ports = append(ports, []corev1.ServicePort{
+			{
+				Name:       "tcp-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       1883,
+				TargetPort: intstr.FromInt(1883),
+			},
+			{
+				Name:       "ssl-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8883,
+				TargetPort: intstr.FromInt(8883),
+			},
+			{
+				Name:       "ws-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8083,
+				TargetPort: intstr.FromInt(8083),
+			},
+			{
+				Name:       "wss-default",
+				Protocol:   corev1.ProtocolTCP,
+				Port:       8084,
+				TargetPort: intstr.FromInt(8084),
+			},
+		}...)
 	}
 
 	svc.Spec.Ports = appsv2beta1.MergeServicePorts(
