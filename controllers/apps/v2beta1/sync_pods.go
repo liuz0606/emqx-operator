@@ -55,7 +55,7 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 	}
 
 	if updateRs != nil && currentRs != nil && updateRs.UID != currentRs.UID {
-		shouldDeletePod, err := s.canBeScaleDownRs(ctx, instance, r, currentRs, targetedEMQXNodesName)
+		shouldDeletePod, err := s.canBeScaleDownRs(ctx, logger, instance, r, currentRs, targetedEMQXNodesName)
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to check if pod can be scale down")}
 		}
@@ -88,7 +88,7 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 	}
 
 	if updateSts != nil && currentSts != nil && updateSts.UID != currentSts.UID {
-		canBeScaledDown, err := s.canBeScaleDownSts(ctx, instance, r, currentSts, targetedEMQXNodesName)
+		canBeScaledDown, err := s.canBeScaleDownSts(ctx, logger, instance, r, currentSts, targetedEMQXNodesName)
 		if err != nil {
 			return subResult{err: emperror.Wrap(err, "failed to check if sts can be scale down")}
 		}
@@ -106,6 +106,7 @@ func (s *syncPods) reconcile(ctx context.Context, logger logr.Logger, instance *
 
 func (s *syncPods) canBeScaleDownRs(
 	ctx context.Context,
+	logger logr.Logger,
 	instance *appsv2beta1.EMQX,
 	r innerReq.RequesterInterface,
 	oldRs *appsv1.ReplicaSet,
@@ -165,7 +166,7 @@ func (s *syncPods) canBeScaleDownRs(
 	}
 
 	if shouldDeletePodInfo.Session > 0 {
-		if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
+		if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node, logger); err != nil {
 			return nil, emperror.Wrap(err, "failed to start node evacuation")
 		}
 		s.EventRecorder.Event(instance, corev1.EventTypeNormal, "NodeEvacuation", fmt.Sprintf("Node %s is being evacuated", shouldDeletePodInfo.Node))
@@ -181,6 +182,7 @@ func (s *syncPods) canBeScaleDownRs(
 
 func (s *syncPods) canBeScaleDownSts(
 	ctx context.Context,
+	logger logr.Logger,
 	instance *appsv2beta1.EMQX,
 	r innerReq.RequesterInterface,
 	oldSts *appsv1.StatefulSet,
@@ -236,7 +238,7 @@ func (s *syncPods) canBeScaleDownSts(
 	}
 
 	if shouldDeletePodInfo.Session > 0 {
-		if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node); err != nil {
+		if err := startEvacuationByAPI(r, instance, targetedEMQXNodesName, shouldDeletePodInfo.Node, logger); err != nil {
 			return false, emperror.Wrap(err, "failed to start node evacuation")
 		}
 		s.EventRecorder.Event(instance, corev1.EventTypeNormal, "NodeEvacuation", fmt.Sprintf("Node %s is being evacuated", shouldDeletePodInfo.Node))
@@ -273,7 +275,7 @@ func getEMQXNodeInfoByAPI(r innerReq.RequesterInterface, nodeName string) (*apps
 	return nodeInfo, nil
 }
 
-func startEvacuationByAPI(r innerReq.RequesterInterface, instance *appsv2beta1.EMQX, migrateTo []string, nodeName string) error {
+func startEvacuationByAPI(r innerReq.RequesterInterface, instance *appsv2beta1.EMQX, migrateTo []string, nodeName string, logger logr.Logger) error {
 	body := map[string]interface{}{
 		"conn_evict_rate": instance.Spec.UpdateStrategy.EvacuationStrategy.ConnEvictRate,
 		"sess_evict_rate": instance.Spec.UpdateStrategy.EvacuationStrategy.SessEvictRate,
@@ -297,10 +299,24 @@ func startEvacuationByAPI(r innerReq.RequesterInterface, instance *appsv2beta1.E
 	// the api/v5/load_rebalance/global_status have some bugs, so we need to ignore the 400 error
 	// wait for EMQX Dev Team fix it.
 	if resp.StatusCode == 400 && strings.Contains(string(respBody), "already_started") {
+		logger.Info("EMQX node evacuation already started",
+			"node", nodeName,
+			"conn_evict_rate", instance.Spec.UpdateStrategy.EvacuationStrategy.ConnEvictRate,
+			"sess_evict_rate", instance.Spec.UpdateStrategy.EvacuationStrategy.SessEvictRate,
+			"migrate_to", migrateTo,
+			"wait_takeover", instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover,
+		)
 		return nil
 	}
 	if resp.StatusCode != 200 {
 		return emperror.Errorf("failed to request API %s, status : %s, body: %s", url.String(), resp.Status, respBody)
 	}
+	logger.Info("EMQX node evacuation started",
+		"node", nodeName,
+		"conn_evict_rate", instance.Spec.UpdateStrategy.EvacuationStrategy.ConnEvictRate,
+		"sess_evict_rate", instance.Spec.UpdateStrategy.EvacuationStrategy.SessEvictRate,
+		"migrate_to", migrateTo,
+		"wait_takeover", instance.Spec.UpdateStrategy.EvacuationStrategy.WaitTakeover,
+	)
 	return nil
 }
